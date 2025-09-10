@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 type Entry = {
   role: string;
   text: string;
@@ -6,8 +8,16 @@ type Entry = {
 };
 
 export default function TranscriptConsole({ entries }: { entries: Entry[] }) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+  }, [entries]);
+
   return (
-    <div className="h-[56vh] overflow-auto bg-neutral-950/40">
+    <div ref={containerRef} className="h-[56vh] overflow-y-auto bg-neutral-950/40">
       <div className="sticky top-0 z-10 bg-neutral-950/70 backdrop-blur-sm border-b border-neutral-800 px-4 py-2 text-xs text-neutral-400 tracking-wider">
         Transcript Log
       </div>

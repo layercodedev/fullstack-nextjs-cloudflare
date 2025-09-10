@@ -38,19 +38,111 @@ export default function VoiceAgent() {
 }
 
 function VoiceAgentInner({ agentId }: { agentId: string }) {
-  const { userAudioAmplitude, agentAudioAmplitude, status } = useLayercodeAgent({
-    agentId,
-    authorizeSessionEndpoint: '/api/authorize',
-    _websocketUrl:'wss://api-staging.layercode.com/v1/agents/web/websocket'
-  });
-
-  // Transcript state (placeholder until wired to messages)
-  const [entries] = useState<Entry[]>([]);
-  const [turn] = useState<'idle' | 'user' | 'assistant'>('idle');
-  const [vadStatus] = useState<'idle' | 'speech' | 'silence' | 'failed'>('idle');
+  // Transcript and signal state
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [turn, setTurn] = useState<'idle' | 'user' | 'assistant'>('idle');
+  const [vadStatus, setVadStatus] = useState<'idle' | 'speech' | 'silence' | 'failed'>('idle');
   const userTurnIndex = useRef<Record<string, number>>({});
   const assistantTurnIndex = useRef<Record<string, number>>({});
-  void userTurnIndex; void assistantTurnIndex;
+
+  // Helper to upsert streaming text into entries
+  function upsertStreamingEntry(params: { role: 'user' | 'assistant'; turnId?: string; text: string; replace?: boolean }) {
+    const { role, turnId, text, replace } = params;
+    if (!turnId) {
+      // No turn id, just append as a standalone entry
+      setEntries(prev => [...prev, { role, text, ts: Date.now() }]);
+      return;
+    }
+
+    const indexMap = role === 'user' ? userTurnIndex.current : assistantTurnIndex.current;
+    const existingIndex = indexMap[turnId];
+    if (existingIndex === undefined) {
+      setEntries(prev => {
+        const nextIndex = prev.length;
+        indexMap[turnId] = nextIndex;
+        return [...prev, { role, text, ts: Date.now(), turnId }];
+      });
+    } else {
+      setEntries(prev => {
+        const copy = prev.slice();
+        const current = copy[existingIndex];
+        copy[existingIndex] = {
+          ...current,
+          text: replace ? text : current.text + text,
+        };
+        return copy;
+      });
+    }
+  }
+
+  const { userAudioAmplitude, agentAudioAmplitude, status, mute, unmute, isMuted } = useLayercodeAgent({
+    agentId,
+    authorizeSessionEndpoint: '/api/authorize',
+    _websocketUrl: 'wss://api-staging.layercode.com/v1/agents/web/websocket',
+    onMuteStateChange(isMuted) {
+      setEntries(prev => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
+    },
+    onMessage: (data: any) => {
+      // Expected event shapes include:
+      // - { type: 'turn.start', role: 'user' | 'assistant' }
+      // - { type: 'user.transcript.delta', content: string, turn_id: string }
+      // - { type: 'user.transcript', content: string, turn_id: string }
+      // - { type: 'response.text', content: string, turn_id: string }
+      // - { type: 'response.completed', turn_id: string }
+      // - { type: 'vad_events', event: 'vad_start' | 'vad_end' | 'failed' }
+
+      const ts = Date.now();
+      switch (data?.type) {
+        case 'turn.start': {
+          if (data.role === 'user' || data.role === 'assistant') {
+            setTurn(data.role);
+            // Optional: log turn change as a data entry for visibility
+            setEntries(prev => [...prev, { role: 'data', text: `TURN → ${data.role}`, ts }]);
+          }
+          break;
+        }
+        case 'user.transcript.delta': {
+          upsertStreamingEntry({ role: 'user', turnId: data.turn_id, text: data.content ?? '' });
+          break;
+        }
+        case 'user.transcript': {
+          // Final transcript for the user; replace accumulated text to ensure correctness
+          upsertStreamingEntry({ role: 'user', turnId: data.turn_id, text: data.content ?? '', replace: true });
+          // After user finishes talking, VAD likely ended; keep vadStatus updates driven by vad_events
+          break;
+        }
+        case 'response.text': {
+          upsertStreamingEntry({ role: 'assistant', turnId: data.turn_id, text: data.content ?? '' });
+          break;
+        }
+        case 'response.completed': {
+          // Assistant finished speaking
+          setTurn('idle');
+          break;
+        }
+        case 'vad_events': {
+          if (data.event === 'vad_start') setVadStatus('speech');
+          else if (data.event === 'vad_end') setVadStatus('silence');
+          else if (data.event === 'failed' || data.event === 'vad_failed') setVadStatus('failed');
+          // Also log VAD events to the transcript for debugging
+          setEntries(prev => [...prev, { role: 'data', text: `VAD → ${data.event}`, ts }]);
+          break;
+        }
+        default: {
+          // Fallback: log unknown events as data entries for visibility
+          if (data) {
+            try {
+              const summary = typeof data === 'string' ? data : JSON.stringify(data);
+              setEntries(prev => [...prev, { role: 'data', text: summary, ts }]);
+            } catch {
+              setEntries(prev => [...prev, { role: 'data', text: '[unserializable event]', ts }]);
+            }
+          }
+          break;
+        }
+      }
+    }
+  });
 
   const userAccent = useMemo(() => '#9B62FF', []);
   const assistantAccent = useMemo(() => '#9B62FF', []);
@@ -63,19 +155,37 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           <span className="text-neutral-700">/</span>
           <ConnectionStatusIndicator status={status} />
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-neutral-400">Turn</span>
-          <span
-            className={`px-2 py-1 rounded border text-[11px] uppercase tracking-wider ${
-              turn === 'assistant'
-                ? 'border-cyan-700 text-cyan-300'
-                : turn === 'user'
-                  ? 'border-emerald-700 text-emerald-300'
-                  : 'border-neutral-700 text-gray-400'
-            }`}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs uppercase tracking-wider text-neutral-400">Turn</span>
+            <span
+              className={`px-2 py-1 rounded border text-[11px] uppercase tracking-wider ${
+                turn === 'assistant'
+                  ? 'border-cyan-700 text-cyan-300'
+                  : turn === 'user'
+                    ? 'border-emerald-700 text-emerald-300'
+                    : 'border-neutral-700 text-gray-400'
+              }`}
+            >
+              {turn}
+            </span>
+          </div>
+
+          <span className="text-neutral-700">/</span>
+
+          <a
+            href={`https://dash.layercode.com/agents/${agentId}`}
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded border border-neutral-700 text-[11px] uppercase tracking-wider text-neutral-300 hover:text-white hover:border-neutral-500 transition-colors"
+            title="Open Agent in Layercode Dashboard"
           >
-            {turn}
-          </span>
+            agent: {agentId}
+          </a>
+
+          <span className="text-neutral-700">/</span>
+
+          <WebhookLogsLink status={status} agentId={agentId} />
         </div>
       </div>
 
@@ -138,10 +248,16 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
                 <div className="flex items-center justify-center">
                   <div className="relative">
                     <div className="absolute inset-0 blur-md rounded-full" style={{ boxShadow: '0 0 24px #9B62FF55' }} />
-                    <div className="relative flex items-center gap-3 rounded-full border border-neutral-800/80 bg-neutral-950/50 px-4 py-2">
-                      <span className="text-xs text-neutral-400 uppercase tracking-wider">Mic</span>
-                      <div className="w-10 h-10 rounded-full bg-neutral-900 text-brand-purple flex items-center justify-center border border-neutral-800">
-                        <MicrophoneButton />
+                    <div className="relative flex flex-col items-center gap-3 rounded-xl border border-neutral-800/80 bg-neutral-950/50 px-6 py-4">
+                      <span className="text-xs text-neutral-400 uppercase tracking-wider">Microphone</span>
+                      <MicrophoneButton
+                        isMuted={isMuted}
+                        onToggle={() => {
+                          if (isMuted) unmute(); else mute();
+                        }}
+                      />
+                      <div className={`text-[11px] uppercase tracking-wider ${isMuted ? 'text-red-300' : 'text-neutral-400'}`}>
+                        {isMuted ? 'Muted' : 'Live'}
                       </div>
                     </div>
                   </div>
@@ -156,9 +272,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
         </div>
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <WebhookLogsLink status={status} agentId={agentId} />
-      </div>
+      
     </div>
   );
 }
