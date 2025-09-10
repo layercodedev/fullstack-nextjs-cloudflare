@@ -26,9 +26,7 @@ export default function VoiceAgent() {
             <span className="text-sm tracking-widest uppercase text-neutral-400">Layercode Voice Agent</span>
           </div>
         </div>
-        <div className="rounded-md border border-red-900/50 bg-red-950/40 text-red-300 p-4">
-          Error: NEXT_PUBLIC_LAYERCODE_AGENT_ID is not set.
-        </div>
+        <div className="rounded-md border border-red-900/50 bg-red-950/40 text-red-300 p-4">Error: NEXT_PUBLIC_LAYERCODE_AGENT_ID is not set.</div>
       </div>
     );
   }

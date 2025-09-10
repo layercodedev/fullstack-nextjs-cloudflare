@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type Props = {
@@ -13,7 +13,7 @@ export default function SpectrumVisualizer({
   amplitude,
   label,
   accent = '#9B62FF', // brand-purple
-  bars = 48,
+  bars = 48
 }: Props) {
   const [levels, setLevels] = useState<number[]>(() => Array.from({ length: bars }, () => 0));
   const raf = useRef<number | null>(null);
@@ -55,7 +55,7 @@ export default function SpectrumVisualizer({
               style={{
                 height: `${Math.max(2, Math.floor(h * 96))}px`,
                 background: `linear-gradient(180deg, ${accent} 0%, ${accent}66 60%, ${accent}22 100%)`,
-                boxShadow: `0 0 8px ${accent}33`,
+                boxShadow: `0 0 8px ${accent}33`
               }}
             />
           </div>
@@ -64,5 +64,3 @@ export default function SpectrumVisualizer({
     </div>
   );
 }
-
-

@@ -15,13 +15,7 @@ export function AudioVisualization({ amplitude }: { amplitude: number }) {
         // Calculate height based on amplitude, multiplier and min/max constraints
         const height = minHeight + normalizedAmplitude * maxHeight * multiplier;
 
-        return (
-          <div
-            key={index}
-            className="bg-[#FF5B41] dark:bg-[#FF7B61] w-1.5 rounded-sm transition-all duration-75"
-            style={{ height: `${height}px` }}
-          />
-        );
+        return <div key={index} className="bg-[#FF5B41] dark:bg-[#FF7B61] w-1.5 rounded-sm transition-all duration-75" style={{ height: `${height}px` }} />;
       })}
     </div>
   );

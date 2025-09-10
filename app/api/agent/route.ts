@@ -16,17 +16,17 @@ export const POST = async (request: Request) => {
   const requestBody = await request.json();
   const signature = request.headers.get('layercode-signature') || '';
   const secret = process.env.LAYERCODE_WEBHOOK_SECRET || '';
-  const isValid = verifySignature({ payload: JSON.stringify(requestBody), signature, secret });
+  const isValid = verifySignature({
+    payload: JSON.stringify(requestBody),
+    signature,
+    secret
+  });
   // if (!isValid) return new Response('Unauthorized', { status: 401 });
 
-  const {
-    session_id,
-    text,
-    type,
-  } = requestBody;
+  const { session_id, text, type } = requestBody;
 
-  if (!['message', 'session.start', 'session.end', 'session.update'].includes(type)){
-    console.log('type not included!!!', type)
+  if (!['message', 'session.start', 'session.end', 'session.update'].includes(type)) {
+    console.log('type not included!!!', type);
   }
 
   const messages = sessionMessages[session_id] || [];
@@ -55,7 +55,7 @@ export const POST = async (request: Request) => {
         messages.push({ role: 'assistant', content: text });
         sessionMessages[session_id] = messages;
         stream.end();
-      },
+      }
     });
 
     stream.data({ aiIsThinking: true });

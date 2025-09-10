@@ -13,9 +13,9 @@ export const POST = async (request: Request) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`
     },
-    body: JSON.stringify(requestBody),
+    body: JSON.stringify(requestBody)
   });
 
   if (!response.ok) {
