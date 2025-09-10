@@ -134,7 +134,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
-      <HeaderBar status={status} />
+      <HeaderBar agentId={agentId} status={status} turn={turn} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
