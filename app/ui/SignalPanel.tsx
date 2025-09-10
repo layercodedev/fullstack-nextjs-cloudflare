@@ -51,19 +51,19 @@ export function SignalPanel({
       </div>
 
       <div>
-        <SpectrumVisualizer label="Mic Input" amplitude={userAudioAmplitude} accent={userAccent} />
+        <SpectrumVisualizer label="User" amplitude={10 * userAudioAmplitude} accent={userAccent} />
         <ul className="mt-2 text-[11px] leading-5 text-neutral-400">
-          <li>16-bit PCM audio data</li>
+          {/* <li>16-bit PCM audio data</li>
           <li>8000 Hz sample rate</li>
-          <li>Mono channel</li>
+          <li>Mono channel</li> */}
         </ul>
       </div>
       <div>
-        <SpectrumVisualizer label="Assistant Output" amplitude={agentAudioAmplitude} accent={assistantAccent} />
+        <SpectrumVisualizer label="Agent" amplitude={10 * agentAudioAmplitude} accent={assistantAccent} />
         <ul className="mt-2 text-[11px] leading-5 text-neutral-400">
-          <li>16-bit PCM audio data</li>
+          {/* <li>16-bit PCM audio data</li>
           <li>16000 Hz sample rate</li>
-          <li>Mono channel</li>
+          <li>Mono channel</li> */}
         </ul>
       </div>
 

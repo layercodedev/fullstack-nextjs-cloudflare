@@ -45,7 +45,6 @@ export default function SpectrumVisualizer({
     <div className="w-full">
       <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span className="tracking-wide">{label}</span>
-        <span className="uppercase tracking-widest text-[10px]">Spectrum</span>
       </div>
       <div className="h-24 w-full grid" style={{ gridTemplateColumns: `repeat(${bars}, minmax(0, 1fr))`, gap: '2px' }}>
         {levels.map((h, i) => (
