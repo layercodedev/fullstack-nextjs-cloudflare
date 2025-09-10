@@ -5,7 +5,8 @@ import { useEffect, useRef, useState } from 'react';
 import TranscriptConsole from './TranscriptConsole';
 import PromptPane from './PromptPane';
 import { HeaderBar } from './HeaderBar';
-import { SignalPanel } from './SignalPanel';
+import SpectrumVisualizer from './SpectrumVisualizer';
+import { MicrophoneButton } from './MicrophoneButton';
 
 type Entry = { role: string; text: string; ts: number; turnId?: string };
 
@@ -37,7 +38,6 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
   // Transcript and signal state
   const [entries, setEntries] = useState<Entry[]>([]);
   const [turn, setTurn] = useState<'idle' | 'user' | 'assistant'>('idle');
-  const [vadStatus, setVadStatus] = useState<'idle' | 'speech' | 'silence' | 'failed'>('idle');
   const userTurnIndex = useRef<Record<string, number>>({});
   const assistantTurnIndex = useRef<Record<string, number>>({});
 
@@ -116,14 +116,6 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           setTurn('idle');
           break;
         }
-        case 'vad_events': {
-          if (data.event === 'vad_start') setVadStatus('speech');
-          else if (data.event === 'vad_end') setVadStatus('silence');
-          else if (data.event === 'failed' || data.event === 'vad_failed') setVadStatus('failed');
-          // Also log VAD events to the transcript for debugging
-          setEntries(prev => [...prev, { role: 'data', text: `VAD → ${data.event}`, ts }]);
-          break;
-        }
         default: {
           // Fallback: log unknown events as data entries for visibility
           if (data) {
@@ -141,34 +133,41 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       <HeaderBar agentId={agentId} status={status} turn={turn} />
 
-      <div className="rounded-md border border-neutral-800 bg-neutral-950/60 overflow-hidden shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset]">
-        <div className="grid grid-cols-12">
-          <div className="col-span-6 border-r border-neutral-800">
-            <div className="px-4 py-2 border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-400">Transcript</div>
-            <TranscriptConsole entries={entries} />
-          </div>
-
-          <div className="col-span-3 border-r border-neutral-800">
-            <div className="px-4 py-2 border-b border-neutral-800 text-xs uppercase tracking-wider text-neutral-400">Signal</div>
-            <SignalPanel
-              userAudioAmplitude={userAudioAmplitude}
-              agentAudioAmplitude={agentAudioAmplitude}
-              vadStatus={vadStatus}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
+          <SpectrumVisualizer label="Mic Input" amplitude={userAudioAmplitude} />
+          <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 8000 Hz • Mono</p>
+        </div>
+        <div className="flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <MicrophoneButton
               isMuted={isMuted}
-              onToggleMute={() => { if (isMuted) unmute(); else mute(); }}
+              onToggle={() => {
+                if (isMuted) unmute();
+                else mute();
+              }}
             />
+            <div className={`text-[11px] uppercase tracking-wider ${isMuted ? 'text-red-300' : 'text-neutral-400'}`}>
+              {isMuted ? 'Muted' : 'Live'}
+            </div>
           </div>
-
-          <div className="col-span-3">
-            <PromptPane />
-          </div>
+        </div>
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
+          <SpectrumVisualizer label="Assistant Output" amplitude={agentAudioAmplitude} />
+          <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 16000 Hz • Mono</p>
         </div>
       </div>
 
-      
+      <div className="rounded-md border border-neutral-800 overflow-hidden">
+        <TranscriptConsole entries={entries} />
+      </div>
+
+      <div className="rounded-md border border-neutral-800 overflow-hidden">
+        <PromptPane />
+      </div>
     </div>
   );
 }

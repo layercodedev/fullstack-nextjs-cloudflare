@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef } from 'react';
 
 type Entry = {
@@ -18,8 +20,8 @@ export default function TranscriptConsole({ entries }: { entries: Entry[] }) {
 
   return (
     <div ref={containerRef} className="h-[56vh] overflow-y-auto bg-neutral-950/40">
-      <div className="sticky top-0 z-10 bg-neutral-950/70 backdrop-blur-sm border-b border-neutral-800 px-4 py-2 text-xs text-neutral-400 tracking-wider">
-        Transcript Log
+      <div className="sticky top-0 z-10 bg-neutral-950/70 backdrop-blur-sm border-b border-neutral-800 px-4 py-2 text-xs text-neutral-400 tracking-wider uppercase">
+        Transcript
       </div>
       <ul className="divide-y divide-neutral-800">
         {entries.map((e, i) => (
