@@ -5,7 +5,7 @@ const VoiceAgent = dynamic(() => import('./ui/VoiceAgent'), { ssr: false });
 
 export default function Home() {
   return (
-    <div className="w-full min-h-[80vh] flex items-center justify-center">
+    <div >
       <VoiceAgent />
     </div>
   );

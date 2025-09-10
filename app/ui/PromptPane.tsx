@@ -5,7 +5,7 @@ import config from '@/layercode.config.json';
 
 export default function PromptPane() {
   const prompt: string = (config as any)?.prompt || '';
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div>
@@ -13,7 +13,7 @@ export default function PromptPane() {
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-4 py-2 text-xs uppercase tracking-wider text-neutral-400 border-b border-neutral-800"
       >
-        <span>{open ? '▼' : '▲'} Prompt (hideable)</span>
+        <span>{open ? '▼' : '▲'} Prompt</span>
       </button>
       {open && (
         <div className="p-4">

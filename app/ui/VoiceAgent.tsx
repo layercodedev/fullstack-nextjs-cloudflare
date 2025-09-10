@@ -133,13 +133,13 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
   });
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      <HeaderBar agentId={agentId} status={status} turn={turn} />
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
+      <HeaderBar status={status} />
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
-          <SpectrumVisualizer label="Mic Input" amplitude={userAudioAmplitude} />
-          <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 8000 Hz • Mono</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
+        <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
+          <SpectrumVisualizer label="User" amplitude={userAudioAmplitude} />
+          {/* <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 8000 Hz • Mono</p> */}
         </div>
         <div className="flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
@@ -155,17 +155,17 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
             </div>
           </div>
         </div>
-        <div className="rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
-          <SpectrumVisualizer label="Assistant Output" amplitude={agentAudioAmplitude} />
-          <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 16000 Hz • Mono</p>
+        <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
+          <SpectrumVisualizer label="Agent" amplitude={agentAudioAmplitude} />
+          {/* <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 16000 Hz • Mono</p> */}
         </div>
       </div>
 
-      <div className="rounded-md border border-neutral-800 overflow-hidden">
+      <div className="rounded-md border border-neutral-800 overflow-hidden w-full max-w-full min-w-0">
         <TranscriptConsole entries={entries} />
       </div>
 
-      <div className="rounded-md border border-neutral-800 overflow-hidden">
+      <div className="rounded-md border border-neutral-800 overflow-hidden w-full max-w-full min-w-0">
         <PromptPane />
       </div>
     </div>
