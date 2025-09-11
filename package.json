@@ -20,7 +20,8 @@
 		"ai": "^5.0.39",
 		"next": "15.5.2",
 		"react": "19.1.0",
-		"react-dom": "19.1.0"
+		"react-dom": "19.1.0",
+		"zod": "^4.1.7"
 	},
 	"devDependencies": {
 		"@eslint/eslintrc": "^3.3.1",
