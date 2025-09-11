@@ -1,11 +1,13 @@
 export const dynamic = 'force-dynamic';
 
 import { createOpenAI } from '@ai-sdk/openai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { streamText, ModelMessage } from 'ai';
 import { streamResponse, verifySignature } from '@layercode/node-server-sdk';
 import config from '@/layercode.config.json';
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const gemini = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY! });
 const sessionMessages = {} as Record<string, ModelMessage[]>;
 
 const SYSTEM_PROMPT = config.prompt;
@@ -48,7 +50,8 @@ export const POST = async (request: Request) => {
 
   return streamResponse(requestBody, async ({ stream }) => {
     const { textStream } = streamText({
-      model: openai('gpt-4o-mini'),
+      // model: openai('gpt-4o-mini'),
+      model: gemini('gemini-2.5-flash-lite'),
       system: SYSTEM_PROMPT,
       messages,
       onFinish: async ({ text }) => {
