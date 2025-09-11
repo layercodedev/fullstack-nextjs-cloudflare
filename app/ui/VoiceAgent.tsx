@@ -42,6 +42,32 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
   const [userSpeaking, setUserSpeaking] = useState(false);
   const userTurnIndex = useRef<Record<string, number>>({});
   const assistantTurnIndex = useRef<Record<string, number>>({});
+  const notifyRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Prepare notification audio element
+    const a = new Audio('/notify1.wav');
+    a.preload = 'auto';
+    a.volume = 0.8;
+    notifyRef.current = a;
+    return () => {
+      if (notifyRef.current) {
+        // best-effort cleanup
+        notifyRef.current.pause();
+        notifyRef.current.src = '';
+        notifyRef.current = null;
+      }
+    };
+  }, []);
+
+  function playNotify() {
+    const a = notifyRef.current;
+    if (!a) return;
+    try {
+      a.currentTime = 0;
+      a.play().catch(() => {});
+    } catch {}
+  }
 
   // Helper to upsert streaming text into entries
   function upsertStreamingEntry(params: { role: 'user' | 'assistant'; turnId?: string; text: string; replace?: boolean }) {
@@ -85,6 +111,9 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
       switch (data?.type) {
         case 'turn.start': {
           setTurn(data.role);
+          if (data.role == 'assistant') {
+            playNotify();
+          }
           // Optional: log turn change as a data entry for visibility
           // setEntries((prev) => [...prev, { role: 'data', text: `TURN → ${data.role}`, ts }]);
           break;
