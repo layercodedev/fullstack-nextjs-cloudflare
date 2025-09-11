@@ -6,54 +6,93 @@ type Props = {
   label: string;
   accent?: string; // tailwind color hex or name
   bars?: number;
+  fillParent?: boolean; // when true, fill parent height; otherwise use default height
 };
 
-// Lightweight pseudo-spectrum animation driven by amplitude
-export default function SpectrumVisualizer({
-  amplitude,
-  label,
-  accent = '#9B62FF', // brand-purple
-  bars = 48
-}: Props) {
+// Center-aligned bars that grow up/down equally.
+// Center bar is most reactive; edges least.
+// Slight "follow" wave via small per-bar delay using amplitude history.
+export default function SpectrumVisualizer({ amplitude, label, accent = '#9B62FF', bars = 48, fillParent = false }: Props) {
+  const clampedAmp = Math.max(0, Math.min(1, amplitude));
+  const ampRef = useRef(clampedAmp);
+  useEffect(() => {
+    ampRef.current = clampedAmp;
+  }, [clampedAmp]);
   const [levels, setLevels] = useState<number[]>(() => Array.from({ length: bars }, () => 0));
+  const weights = useMemo(() => {
+    const arr: number[] = [];
+    const center = (bars - 1) / 2;
+    for (let i = 0; i < bars; i++) {
+      const d = Math.abs(i - center);
+      const norm = center === 0 ? 0 : d / center; // 0 at center, 1 at edges
+      // Raised-cosine envelope: 1 at center, ~0 at edges
+      const base = Math.cos((norm * Math.PI) / 2) ** 2;
+      // Keep a minimum responsiveness at edges
+      const w = 0.2 + 0.8 * base;
+      arr.push(w);
+    }
+    return arr;
+  }, [bars]);
+
+  const ampHistoryRef = useRef<number[]>(Array(64).fill(0));
   const raf = useRef<number | null>(null);
-  const phases = useMemo(() => Array.from({ length: bars }, (_, i) => Math.random() * Math.PI * 2 + i * 0.123), [bars]);
-  const speeds = useMemo(() => Array.from({ length: bars }, () => 0.8 + Math.random() * 1.6), [bars]);
+  const lastTimeRef = useRef(0);
 
   useEffect(() => {
-    let t = 0;
     const tick = () => {
-      t += 0.016; // ~60fps
-      const target = new Array(bars);
-      for (let i = 0; i < bars; i++) {
-        const x = i / (bars - 1);
-        const midCurve = Math.sin(Math.PI * x) ** 1.2; // bell
-        const wobble = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(phases[i] + t * speeds[i]));
-        const env = Math.min(1, Math.max(0, amplitude));
-        target[i] = Math.min(1, midCurve * wobble * (0.2 + env * 1.1));
+      // Limit to ~30 FPS
+      const now = performance.now();
+      if (now - lastTimeRef.current < 33) {
+        raf.current = requestAnimationFrame(tick);
+        return;
       }
-      setLevels((prev) => prev.map((p, i) => p + (target[i] - p) * 0.25));
+      lastTimeRef.current = now;
+
+      // Push latest amplitude into history buffer
+      const hist = ampHistoryRef.current;
+      hist.push(ampRef.current);
+      if (hist.length > 256) hist.shift();
+
+      const center = (bars - 1) / 2;
+      const maxDelay = 8; // frames of delay from center to edge
+      const next: number[] = new Array(bars);
+      for (let i = 0; i < bars; i++) {
+        const d = Math.abs(i - center);
+        const norm = center === 0 ? 0 : d / center; // 0..1
+        const delay = Math.round(norm * maxDelay);
+        const idx = Math.max(0, hist.length - 1 - delay);
+        const ampDelayed = hist[idx] ?? ampRef.current;
+        const target = Math.min(1, Math.max(0, ampDelayed * weights[i]));
+        next[i] = target;
+      }
+
+      // Smooth towards targets (no jiggle)
+      setLevels((prev) => prev.map((p, i) => p + (next[i] - p) * 0.22));
       raf.current = requestAnimationFrame(tick);
     };
+
     raf.current = requestAnimationFrame(tick);
     return () => {
       if (raf.current) cancelAnimationFrame(raf.current);
     };
-  }, [amplitude, bars, phases, speeds]);
+  }, [bars, weights]);
 
   return (
     <div className="w-full">
       <div className="flex items-center justify-between text-xs text-neutral-400 mb-2">
         <span className="tracking-wide">{label}</span>
       </div>
-      <div className="h-24 w-full grid" style={{ gridTemplateColumns: `repeat(${bars}, minmax(0, 1fr))`, gap: '2px' }}>
+      <div className={`${fillParent ? 'h-full' : 'h-24'} w-full grid`} style={{ gridTemplateColumns: `repeat(${bars}, minmax(0, 1fr))`, gap: '2px' }}>
         {levels.map((h, i) => (
           <div key={i} className="relative bg-transparent">
             <div
-              className="absolute bottom-0 w-full rounded-sm"
+              className="absolute w-full rounded-full"
               style={{
-                height: `${Math.max(2, Math.floor(h * 96))}px`,
-                background: `linear-gradient(180deg, ${accent} 0%, ${accent}66 60%, ${accent}22 100%)`,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                height: `${Math.round(h * 400)}%`,
+                minHeight: 4,
+                background: `linear-gradient(180deg, ${accent} 0%, ${accent}88 50%, ${accent} 100%)`,
                 boxShadow: `0 0 8px ${accent}33`
               }}
             />

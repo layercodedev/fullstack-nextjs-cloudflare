@@ -19,6 +19,8 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const dataRef = useRef<Uint8Array | null>(null);
+  const filterRef = useRef<BiquadFilterNode | null>(null);
+  const lastTimeRef = useRef<number>(0);
 
   // Setup audio graph once on mount
   useEffect(() => {
@@ -39,20 +41,33 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
         analyser.fftSize = 2048;
         analyser.minDecibels = -90;
         analyser.maxDecibels = -10;
-        analyser.smoothingTimeConstant = 0.85;
+        // Heavier smoothing for calmer motion
+        analyser.smoothingTimeConstant = 0.95;
         analyserRef.current = analyser;
 
         const source = ctx.createMediaStreamSource(stream);
         sourceRef.current = source;
-        source.connect(analyser);
+        // Gentle low-pass filter to reduce high-frequency jitter
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        // Allow more articulation while still smoothing harsh highs
+        filter.frequency.value = 900; // Hz
+        filter.Q.value = 0.707;
+        filterRef.current = filter;
+        source.connect(filter);
+        filter.connect(analyser);
 
         dataRef.current = new Uint8Array(analyser.frequencyBinCount);
 
         // Start in running state unless paused is true
         if (paused) {
-          try { await ctx.suspend(); } catch {}
+          try {
+            await ctx.suspend();
+          } catch {}
         } else {
-          try { await ctx.resume(); } catch {}
+          try {
+            await ctx.resume();
+          } catch {}
         }
 
         draw();
@@ -66,12 +81,24 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
     return () => {
       cancelled = true;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      try { analyserRef.current?.disconnect(); } catch {}
-      try { sourceRef.current?.disconnect(); } catch {}
-      try { audioCtxRef.current?.close(); } catch {}
-      try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch {}
+      try {
+        analyserRef.current?.disconnect();
+      } catch {}
+      try {
+        sourceRef.current?.disconnect();
+      } catch {}
+      try {
+        filterRef.current?.disconnect();
+      } catch {}
+      try {
+        audioCtxRef.current?.close();
+      } catch {}
+      try {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+      } catch {}
       analyserRef.current = null;
       sourceRef.current = null;
+      filterRef.current = null;
       streamRef.current = null;
       audioCtxRef.current = null;
       dataRef.current = null;
@@ -117,6 +144,13 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
     const H = cssHeight;
 
     const render = () => {
+      // Limit to ~20 FPS for calmer motion
+      const now = performance.now();
+      if (now - lastTimeRef.current < 20) {
+        rafRef.current = requestAnimationFrame(render);
+        return;
+      }
+      lastTimeRef.current = now;
       // clear
       ctx2d.clearRect(0, 0, W, H);
 
@@ -131,10 +165,10 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
       ctx2d.globalAlpha = 1;
 
       // Get time-domain data for oscilloscope
-      analyser.getByteTimeDomainData(data);
+      analyser.getByteTimeDomainData(data as unknown as Uint8Array);
 
       // Build path
-      ctx2d.lineWidth = 2;
+      ctx2d.lineWidth = 1.5;
       const grad = ctx2d.createLinearGradient(0, 0, W, 0);
       grad.addColorStop(0, accent);
       grad.addColorStop(0.5, accent);
@@ -142,12 +176,14 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
       ctx2d.strokeStyle = grad;
 
       ctx2d.beginPath();
-      // Find a zero-crossing start to stabilize the line a bit
-      let sliceWidth = W / data.length;
+      // Downsample to smooth motion but keep more detail
+      const step = 2; // take every 2nd sample
+      const visiblePoints = Math.floor(data.length / step);
+      let sliceWidth = W / visiblePoints;
       let x = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = data[i] / 128.0 - 1.0; // -1..1
-        const y = H / 2 + v * (H * 0.4);
+      for (let i = 0; i < data.length; i += step) {
+        const v = (data[i] as number) / 128.0 - 1.0; // -1..1
+        const y = H / 2 + v * (H * 0.5); // increase vertical range
         if (i === 0) ctx2d.moveTo(x, y);
         else ctx2d.lineTo(x, y);
         x += sliceWidth;
@@ -156,8 +192,8 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
 
       // Glow
       ctx2d.save();
-      ctx2d.shadowColor = accent + '55';
-      ctx2d.shadowBlur = 8;
+      ctx2d.shadowColor = accent + '44';
+      ctx2d.shadowBlur = 4;
       ctx2d.stroke();
       ctx2d.restore();
 
@@ -179,4 +215,3 @@ export default function MicOscilloscope({ label = 'Microphone', accent = '#9B62F
     </div>
   );
 }
-
