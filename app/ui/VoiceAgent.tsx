@@ -38,6 +38,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
   // Transcript and signal state
   const [entries, setEntries] = useState<Entry[]>([]);
   const [turn, setTurn] = useState<'idle' | 'user' | 'assistant'>('idle');
+  const [userSpeaking, setUserSpeaking] = useState(false);
   const userTurnIndex = useRef<Record<string, number>>({});
   const assistantTurnIndex = useRef<Record<string, number>>({});
 
@@ -79,22 +80,16 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
       setEntries((prev) => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
     },
     onMessage: (data: any) => {
-      // Expected event shapes include:
-      // - { type: 'turn.start', role: 'user' | 'assistant' }
-      // - { type: 'user.transcript.delta', content: string, turn_id: string }
-      // - { type: 'user.transcript', content: string, turn_id: string }
-      // - { type: 'response.text', content: string, turn_id: string }
-      // - { type: 'response.completed', turn_id: string }
-      // - { type: 'vad_events', event: 'vad_start' | 'vad_end' | 'failed' }
-
       const ts = Date.now();
       switch (data?.type) {
         case 'turn.start': {
-          if (data.role === 'user' || data.role === 'assistant') {
-            setTurn(data.role);
-            // Optional: log turn change as a data entry for visibility
-            setEntries((prev) => [...prev, { role: 'data', text: `TURN → ${data.role}`, ts }]);
-          }
+          setTurn(data.role);
+          // Optional: log turn change as a data entry for visibility
+          // setEntries((prev) => [...prev, { role: 'data', text: `TURN → ${data.role}`, ts }]);
+          break;
+        }
+        case 'vad_events': {
+          setUserSpeaking(data.event == 'vad_start');
           break;
         }
         case 'user.transcript.delta': {
@@ -105,30 +100,25 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           upsertStreamingEntry({ role: 'assistant', turnId: data.turn_id, text: data.content ?? '' });
           break;
         }
-        case 'response.completed': {
-          // Assistant finished speaking
-          setTurn('idle');
-          break;
-        }
-        default: {
-          // Fallback: log unknown events as data entries for visibility
-          if (data) {
-            try {
-              const summary = typeof data === 'string' ? data : JSON.stringify(data);
-              setEntries((prev) => [...prev, { role: 'data', text: summary, ts }]);
-            } catch {
-              setEntries((prev) => [...prev, { role: 'data', text: '[unserializable event]', ts }]);
-            }
-          }
-          break;
-        }
+        // default: {
+        //   // Fallback: log unknown events as data entries for visibility
+        //   if (data) {
+        //     try {
+        //       const summary = typeof data === 'string' ? data : JSON.stringify(data);
+        //       setEntries((prev) => [...prev, { role: 'data', text: summary, ts }]);
+        //     } catch {
+        //       setEntries((prev) => [...prev, { role: 'data', text: '[unserializable event]', ts }]);
+        //     }
+        //   }
+        //   break;
+        // }
       }
     }
   });
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
-      <HeaderBar agentId={agentId} status={status} turn={turn} />
+      <HeaderBar agentId={agentId} status={status} turn={turn} userSpeaking={userSpeaking} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
@@ -139,6 +129,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           <div className="flex flex-col items-center gap-3">
             <MicrophoneButton
               isMuted={isMuted}
+              userSpeaking={userSpeaking}
               onToggle={() => {
                 if (isMuted) unmute();
                 else mute();

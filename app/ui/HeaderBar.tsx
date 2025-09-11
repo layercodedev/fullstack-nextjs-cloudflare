@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { ConnectionStatusIndicator } from './ConnectionStatusIndicator';
@@ -60,11 +60,7 @@ export function HeaderBar({ agentId, status, turn }: { agentId: string; status: 
           <span className="uppercase tracking-wider text-neutral-400">Turn:</span>
           <span
             className={`inline-flex items-center justify-center w-24 px-2 py-1 rounded border text-[11px] uppercase tracking-wider ${
-              turn === 'assistant'
-                ? 'border-cyan-700 text-cyan-300'
-                : turn === 'user'
-                ? 'border-emerald-700 text-emerald-300'
-                : 'border-neutral-700 text-gray-400'
+              turn === 'assistant' ? 'border-cyan-700 text-cyan-300' : turn === 'user' ? 'border-emerald-700 text-emerald-300' : 'border-neutral-700 text-gray-400'
             }`}
           >
             {turn}
@@ -100,5 +96,3 @@ export function HeaderBar({ agentId, status, turn }: { agentId: string; status: 
     </header>
   );
 }
-
-
