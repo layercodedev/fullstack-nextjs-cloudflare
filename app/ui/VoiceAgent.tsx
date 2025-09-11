@@ -46,25 +46,25 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
     const { role, turnId, text, replace } = params;
     if (!turnId) {
       // No turn id, just append as a standalone entry
-      setEntries(prev => [...prev, { role, text, ts: Date.now() }]);
+      setEntries((prev) => [...prev, { role, text, ts: Date.now() }]);
       return;
     }
 
     const indexMap = role === 'user' ? userTurnIndex.current : assistantTurnIndex.current;
     const existingIndex = indexMap[turnId];
     if (existingIndex === undefined) {
-      setEntries(prev => {
+      setEntries((prev) => {
         const nextIndex = prev.length;
         indexMap[turnId] = nextIndex;
         return [...prev, { role, text, ts: Date.now(), turnId }];
       });
     } else {
-      setEntries(prev => {
+      setEntries((prev) => {
         const copy = prev.slice();
         const current = copy[existingIndex];
         copy[existingIndex] = {
           ...current,
-          text: replace ? text : current.text + text,
+          text: replace ? text : current.text + text
         };
         return copy;
       });
@@ -76,7 +76,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
     authorizeSessionEndpoint: '/api/authorize',
     _websocketUrl: 'wss://api-staging.layercode.com/v1/agents/web/websocket',
     onMuteStateChange(isMuted) {
-      setEntries(prev => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
+      setEntries((prev) => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
     },
     onMessage: (data: any) => {
       // Expected event shapes include:
@@ -93,18 +93,12 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           if (data.role === 'user' || data.role === 'assistant') {
             setTurn(data.role);
             // Optional: log turn change as a data entry for visibility
-            setEntries(prev => [...prev, { role: 'data', text: `TURN → ${data.role}`, ts }]);
+            setEntries((prev) => [...prev, { role: 'data', text: `TURN → ${data.role}`, ts }]);
           }
           break;
         }
         case 'user.transcript.delta': {
           upsertStreamingEntry({ role: 'user', turnId: data.turn_id, text: data.content ?? '' });
-          break;
-        }
-        case 'user.transcript': {
-          // Final transcript for the user; replace accumulated text to ensure correctness
-          upsertStreamingEntry({ role: 'user', turnId: data.turn_id, text: data.content ?? '', replace: true });
-          // After user finishes talking, VAD likely ended; keep vadStatus updates driven by vad_events
           break;
         }
         case 'response.text': {
@@ -121,9 +115,9 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           if (data) {
             try {
               const summary = typeof data === 'string' ? data : JSON.stringify(data);
-              setEntries(prev => [...prev, { role: 'data', text: summary, ts }]);
+              setEntries((prev) => [...prev, { role: 'data', text: summary, ts }]);
             } catch {
-              setEntries(prev => [...prev, { role: 'data', text: '[unserializable event]', ts }]);
+              setEntries((prev) => [...prev, { role: 'data', text: '[unserializable event]', ts }]);
             }
           }
           break;
@@ -150,9 +144,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
                 else mute();
               }}
             />
-            <div className={`text-[11px] uppercase tracking-wider ${isMuted ? 'text-red-300' : 'text-neutral-400'}`}>
-              {isMuted ? 'Muted' : 'Live'}
-            </div>
+            <div className={`text-[11px] uppercase tracking-wider ${isMuted ? 'text-red-300' : 'text-neutral-400'}`}>{isMuted ? 'Muted' : 'Live'}</div>
           </div>
         </div>
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
