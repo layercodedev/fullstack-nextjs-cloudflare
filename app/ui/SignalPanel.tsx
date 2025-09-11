@@ -17,8 +17,8 @@ export function SignalPanel({
   isMuted: boolean;
   onToggleMute: () => void;
 }) {
-  const userAccent = useMemo(() => '#9B62FF', []);
-  const assistantAccent = useMemo(() => '#9B62FF', []);
+  const userAccent = useMemo(() => '#C4B5FD', []); // violet-300
+  const assistantAccent = useMemo(() => '#67E8F9', []); // cyan-300
 
   return (
     <div className="p-4 space-y-6">

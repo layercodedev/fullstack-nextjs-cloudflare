@@ -30,10 +30,10 @@ export default function TranscriptConsole({ entries }: { entries: Entry[] }) {
             <div className="md:col-span-2 pr-3 mt-1 md:mt-0">
               <span
                 className={`px-2 py-0.5 rounded border text-[10px] uppercase tracking-wider ${
-                  e.role === 'assistant' ? 'border-cyan-700 text-cyan-300' : e.role === 'user' ? 'border-emerald-700 text-emerald-300' : 'border-neutral-700 text-gray-400'
+                  e.role === 'assistant' ? 'border-cyan-700 text-cyan-300' : e.role === 'user' ? 'border-violet-700 text-violet-300' : 'border-neutral-700 text-gray-400'
                 }`}
               >
-                {e.role}
+                {e.role === 'assistant' ? 'Agent' : e.role}
               </span>
             </div>
             <div className={`md:col-span-8 text-sm leading-relaxed text-neutral-200 whitespace-pre-wrap break-words mt-1 md:mt-0 ${e.role === 'data' ? 'font-mono text-[12px] text-neutral-300' : ''}`}>
