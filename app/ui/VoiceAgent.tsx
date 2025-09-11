@@ -6,6 +6,7 @@ import TranscriptConsole from './TranscriptConsole';
 import PromptPane from './PromptPane';
 import { HeaderBar } from './HeaderBar';
 import SpectrumVisualizer from './SpectrumVisualizer';
+import MicOscilloscope from './MicOscilloscope';
 import { MicrophoneButton } from './MicrophoneButton';
 
 type Entry = { role: string; text: string; ts: number; turnId?: string };
@@ -122,7 +123,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
-          <SpectrumVisualizer label="User" amplitude={userAudioAmplitude} />
+          <MicOscilloscope label="User" paused={isMuted} />
           {/* <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 8000 Hz • Mono</p> */}
         </div>
         <div className="flex items-center justify-center">
