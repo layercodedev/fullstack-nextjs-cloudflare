@@ -48,6 +48,8 @@ next-env.d.ts
 .vscode
 .vscode/settings.json
 
+.idea
+
 public/_headers
 
 *lock.yaml
