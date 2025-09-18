@@ -1,12 +1,5 @@
-'use client';
-import dynamic from 'next/dynamic';
-
-const VoiceAgent = dynamic(() => import('./ui/VoiceAgent'), { ssr: false });
+import { ConnectScreen } from './ui/ConnectScreen';
 
 export default function Home() {
-  return (
-    <div >
-      <VoiceAgent />
-    </div>
-  );
+  return <ConnectScreen agentId={process.env.NEXT_PUBLIC_LAYERCODE_AGENT_ID} />;
 }

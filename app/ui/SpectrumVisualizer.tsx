@@ -84,13 +84,13 @@ export default function SpectrumVisualizer({ amplitude, label, accent = '#9B62FF
       </div>
       <div className={`${fillParent ? 'h-full' : 'h-24'} w-full grid`} style={{ gridTemplateColumns: `repeat(${bars}, minmax(0, 1fr))`, gap: '2px' }}>
         {levels.map((h, i) => (
-          <div key={i} className="relative bg-transparent">
+          <div key={i} className="relative bg-transparent overflow-hidden">
             <div
               className="absolute w-full rounded-full"
               style={{
                 top: '50%',
                 transform: 'translateY(-50%)',
-                height: `${Math.round(h * 400)}%`,
+                height: `${Math.min(100, Math.round(h * 400))}%`,
                 minHeight: 4,
                 background: `linear-gradient(180deg, ${accent} 0%, ${accent}88 50%, ${accent} 100%)`,
                 boxShadow: `0 0 8px ${accent}33`

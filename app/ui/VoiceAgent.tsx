@@ -6,12 +6,15 @@ import TranscriptConsole from './TranscriptConsole';
 import PromptPane from './PromptPane';
 import { HeaderBar } from './HeaderBar';
 import SpectrumVisualizer from './SpectrumVisualizer';
-import MicOscilloscope from './MicOscilloscope';
 import { MicrophoneButton } from './MicrophoneButton';
 
 type Entry = { role: string; text: string; ts: number; turnId?: string };
 
-export default function VoiceAgent() {
+type VoiceAgentProps = {
+  onDisconnect?: () => void;
+};
+
+export default function VoiceAgent({ onDisconnect }: VoiceAgentProps = {}) {
   const agentId = process.env.NEXT_PUBLIC_LAYERCODE_AGENT_ID;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -32,10 +35,10 @@ export default function VoiceAgent() {
       </div>
     );
   }
-  return <VoiceAgentInner agentId={agentId} />;
+  return <VoiceAgentInner agentId={agentId} onDisconnect={onDisconnect} />;
 }
 
-function VoiceAgentInner({ agentId }: { agentId: string }) {
+function VoiceAgentInner({ agentId, onDisconnect }: { agentId: string; onDisconnect?: () => void }) {
   // Transcript and signal state
   const [entries, setEntries] = useState<Entry[]>([]);
   const [turn, setTurn] = useState<'idle' | 'user' | 'assistant'>('idle');
@@ -107,6 +110,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
       setEntries((prev) => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
     },
     onMessage: (data: any) => {
+      console.log(data);
       const ts = Date.now();
       switch (data?.type) {
         case 'turn.start': {
@@ -148,11 +152,26 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
-      <HeaderBar agentId={agentId} status={status} turn={turn} userSpeaking={userSpeaking} />
+      <HeaderBar
+        agentId={agentId}
+        status={status}
+        turn={turn}
+        actionSlot={
+          onDisconnect ? (
+            <button
+              type="button"
+              onClick={onDisconnect}
+              className="px-3 py-1.5 rounded border border-gray-700/70 bg-gray-900/20 text-[11px] uppercase tracking-wider text-gray-200 hover:text-white hover:border-gray-500 transition-colors"
+            >
+              End Session
+            </button>
+          ) : null
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
-          <MicOscilloscope label="User" paused={isMuted} />
+          <SpectrumVisualizer label="User" amplitude={userAudioAmplitude * 2} accent="#C4B5FD" />
           {/* <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 8000 Hz • Mono</p> */}
         </div>
         <div className="flex items-center justify-center">
@@ -169,7 +188,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
           </div>
         </div>
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
-          <SpectrumVisualizer label="Agent" amplitude={agentAudioAmplitude} />
+          <SpectrumVisualizer label="Agent" amplitude={agentAudioAmplitude} accent="#67E8F9" />
           {/* <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 16000 Hz • Mono</p> */}
         </div>
       </div>

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ConnectionStatusIndicator } from './ConnectionStatusIndicator';
 import { WebhookLogsLink } from './WebhookLogsLink';
 
 type TurnState = 'idle' | 'user' | 'assistant';
 
-export function HeaderBar({ agentId, status, turn }: { agentId: string; status: string; turn: TurnState }) {
+export function HeaderBar({ agentId, status, turn, actionSlot }: { agentId: string; status: string; turn: TurnState; actionSlot?: ReactNode }) {
   const [copied, setCopied] = useState(false);
   function copyAgentId() {
     if (navigator?.clipboard) {
@@ -60,38 +60,41 @@ export function HeaderBar({ agentId, status, turn }: { agentId: string; status: 
           <span className="uppercase tracking-wider text-neutral-400">Turn:</span>
           <span
             className={`inline-flex items-center justify-center w-24 px-2 py-1 rounded border text-[11px] uppercase tracking-wider ${
-              turn === 'assistant' ? 'border-cyan-700 text-cyan-300' : turn === 'user' ? 'border-emerald-700 text-emerald-300' : 'border-neutral-700 text-gray-400'
+              turn === 'assistant' ? 'border-cyan-700 text-cyan-300' : turn === 'user' ? 'border-violet-700 text-violet-300' : 'border-neutral-700 text-gray-400'
             }`}
           >
-            {turn}
+            {turn === 'assistant' ? 'Agent' : turn}
           </span>
         </div>
       </div>
-      <div className="hidden md:flex items-center gap-4">
-        <WebhookLogsLink agentId={agentId} />
-        <a
-          href="https://docs.layercode.com/"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 text-neutral-300 hover:text-white underline underline-offset-4"
-        >
-          <span>Docs</span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-3 h-3"
-            aria-hidden="true"
+      <div className="flex items-center gap-3">
+        {actionSlot ? <div className="flex items-center">{actionSlot}</div> : null}
+        <div className="hidden md:flex items-center gap-4">
+          <WebhookLogsLink agentId={agentId} />
+          <a
+            href="https://docs.layercode.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-neutral-300 hover:text-white underline underline-offset-4"
           >
-            <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <path d="M15 3h6v6" />
-            <path d="M10 14L21 3" />
-          </svg>
-        </a>
+            <span>Docs</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-3 h-3"
+              aria-hidden="true"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <path d="M15 3h6v6" />
+              <path d="M10 14L21 3" />
+            </svg>
+          </a>
+        </div>
       </div>
     </header>
   );
