@@ -7,7 +7,6 @@ import PromptPane from './PromptPane';
 import { HeaderBar } from './HeaderBar';
 import SpectrumVisualizer from './SpectrumVisualizer';
 import { MicrophoneButton } from './MicrophoneButton';
-import useMicAmplitude from './useMicAmplitude';
 
 type Entry = { role: string; text: string; ts: number; turnId?: string };
 
@@ -107,7 +106,7 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
       setEntries((prev) => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
     },
     onMessage: (data: any) => {
-      console.log(data)
+      console.log(data);
       const ts = Date.now();
       switch (data?.type) {
         case 'turn.start': {
@@ -147,15 +146,13 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
     }
   });
 
-  const micAmplitude = useMicAmplitude(isMuted);
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
       <HeaderBar agentId={agentId} status={status} turn={turn} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
-          <SpectrumVisualizer label="User" amplitude={micAmplitude} accent="#C4B5FD" />
+          <SpectrumVisualizer label="User" amplitude={userAudioAmplitude} accent="#C4B5FD" />
           {/* <p className="mt-2 text-[11px] leading-5 text-neutral-400">16-bit PCM audio data • 8000 Hz • Mono</p> */}
         </div>
         <div className="flex items-center justify-center">
