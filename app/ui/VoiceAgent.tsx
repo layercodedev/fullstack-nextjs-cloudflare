@@ -10,7 +10,11 @@ import { MicrophoneButton } from './MicrophoneButton';
 
 type Entry = { role: string; text: string; ts: number; turnId?: string };
 
-export default function VoiceAgent() {
+type VoiceAgentProps = {
+  onDisconnect?: () => void;
+};
+
+export default function VoiceAgent({ onDisconnect }: VoiceAgentProps = {}) {
   const agentId = process.env.NEXT_PUBLIC_LAYERCODE_AGENT_ID;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -31,10 +35,10 @@ export default function VoiceAgent() {
       </div>
     );
   }
-  return <VoiceAgentInner agentId={agentId} />;
+  return <VoiceAgentInner agentId={agentId} onDisconnect={onDisconnect} />;
 }
 
-function VoiceAgentInner({ agentId }: { agentId: string }) {
+function VoiceAgentInner({ agentId, onDisconnect }: { agentId: string; onDisconnect?: () => void }) {
   // Transcript and signal state
   const [entries, setEntries] = useState<Entry[]>([]);
   const [turn, setTurn] = useState<'idle' | 'user' | 'assistant'>('idle');
@@ -148,7 +152,22 @@ function VoiceAgentInner({ agentId }: { agentId: string }) {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
-      <HeaderBar agentId={agentId} status={status} turn={turn} />
+      <HeaderBar
+        agentId={agentId}
+        status={status}
+        turn={turn}
+        actionSlot={
+          onDisconnect ? (
+            <button
+              type="button"
+              onClick={onDisconnect}
+              className="px-3 py-1.5 rounded border border-gray-700/70 bg-gray-900/20 text-[11px] uppercase tracking-wider text-gray-200 hover:text-white hover:border-gray-500 transition-colors"
+            >
+              End Session
+            </button>
+          ) : null
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-0">
         <div className="hidden md:block rounded-md border border-neutral-800 bg-neutral-950/60 p-4">
