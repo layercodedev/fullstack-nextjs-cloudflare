@@ -1,5 +1,7 @@
-import { ConnectScreen } from './ui/ConnectScreen';
+'use client';
+
+import VoiceAgent from './ui/VoiceAgent';
 
 export default function Home() {
-  return <ConnectScreen agentId={process.env.NEXT_PUBLIC_LAYERCODE_AGENT_ID} />;
+  return <VoiceAgent />;
 }
