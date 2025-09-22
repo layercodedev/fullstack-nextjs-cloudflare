@@ -42,13 +42,8 @@ export function ConnectScreen({ agentId }: ConnectScreenProps) {
               : 'border-violet-600 bg-violet-600/60 text-white hover:bg-violet-500/70 hover:border-violet-500'
           }`}
         >
-          {hasAgentId ? 'Connect' : 'Missing agent id'}
+          Connect
         </button>
-        {!hasAgentId ? (
-          <p className="text-xs text-neutral-500 max-w-sm">
-            Set <code className="text-neutral-300">NEXT_PUBLIC_LAYERCODE_AGENT_ID</code> in your environment to enable the connect flow.
-          </p>
-        ) : null}
       </div>
     </div>
   );
