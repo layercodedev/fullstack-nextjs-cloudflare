@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useRef, useState } from 'react';
 import { MicrophoneIcon } from './MicrophoneIcon';
@@ -34,10 +34,10 @@ export default function PushToTalkButton({ triggerUserTurnStarted, triggerUserTu
         type="button"
         aria-pressed={isPressed}
         aria-label="Press and hold to talk"
-        className={`relative w-25 h-25 rounded-full flex items-center justify-center border transition-all duration-150 transform select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-950 ${
+        className={`relative w-25 h-25 rounded-full flex items-center justify-center border transition-all duration-150 transform select-none focus:outline-none ${
           isPressed
-            ? 'border-emerald-500 bg-emerald-900/40 text-emerald-200 shadow-[0_0_22px_rgba(16,185,129,0.35)] scale-[0.95]'
-            : 'border-neutral-800 bg-neutral-900 text-neutral-200 hover:border-neutral-600'
+            ? 'bg-emerald-900/40 text-emerald-200 border-emerald-300 shadow-[0_0_22px_rgba(16,185,129,0.35)] scale-[0.95]'
+            : 'bg-neutral-900 text-neutral-200 border-violet-900  hover:border-violet-600 shadow-[0px_0px_20px_rgba(147,_51,_234,_0.50)]'
         }`}
         onPointerDown={(event) => {
           event.preventDefault();
