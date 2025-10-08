@@ -9,6 +9,7 @@ import { MicrophoneButton } from './MicrophoneButton';
 import PromptPane from './PromptPane';
 import SpectrumVisualizer from './SpectrumVisualizer';
 import TranscriptConsole from './TranscriptConsole';
+import PushToTalkButton from './PushToTalkButton';
 
 export default function VoiceAgent() {
   const agentId = process.env.NEXT_PUBLIC_LAYERCODE_AGENT_ID as string;
@@ -17,6 +18,7 @@ export default function VoiceAgent() {
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [isPushToTalk, setIsPushToTalk] = useState(false);
   const playNotify = usePlayNotify('/notify1.wav', { volume: 0.8 });
   const userTranscriptChunksRef = useRef<TranscriptCache>(new Map());
 
@@ -26,11 +28,14 @@ export default function VoiceAgent() {
     };
   };
 
-  const { connect, disconnect, userAudioAmplitude, agentAudioAmplitude, status, mute, unmute, isMuted } = useLayercodeAgent({
+  const { connect, disconnect, userAudioAmplitude, agentAudioAmplitude, status, mute, unmute, isMuted, triggerUserTurnStarted, triggerUserTurnFinished } = useLayercodeAgent({
     agentId,
     authorizeSessionEndpoint: '/api/authorize',
     onMuteStateChange(isMuted) {
       setMessages((prev) => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
+    },
+    onConnect: (connectData) => {
+      setIsPushToTalk(connectData.config?.transcription.trigger === 'push_to_talk');
     },
     onMessage: (data: any) => {
       console.log(data);
@@ -153,14 +158,18 @@ export default function VoiceAgent() {
         </div>
         <div className="flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <MicrophoneButton
-              isMuted={isMuted}
-              userIsSpeaking={userSpeaking}
-              onToggleAction={() => {
-                if (isMuted) unmute();
-                else mute();
-              }}
-            />
+            {isPushToTalk ? (
+              <PushToTalkButton triggerUserTurnFinished={triggerUserTurnFinished} triggerUserTurnStarted={triggerUserTurnStarted} />
+            ) : (
+              <MicrophoneButton
+                isMuted={isMuted}
+                userIsSpeaking={userSpeaking}
+                onToggleAction={() => {
+                  if (isMuted) unmute();
+                  else mute();
+                }}
+              />
+            )}
             <div className={`text-[11px] uppercase tracking-wider ${isMuted ? 'text-red-300' : 'text-neutral-400'}`}>{isMuted ? 'Muted' : 'Live'}</div>
           </div>
         </div>
