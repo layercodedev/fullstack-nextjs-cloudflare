@@ -6,6 +6,7 @@ import z from 'zod';
 import { streamResponse, verifySignature } from '@layercode/node-server-sdk';
 import { prettyPrintMsgs } from '@/app/utils/msgs';
 import config from '@/layercode.config.json';
+import { getRuntimeConfig } from '@/app/utils/runtimeConfig';
 
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
@@ -21,6 +22,11 @@ type WebhookRequest = {
     assistant_turn_id?: string;
   };
   type: 'message' | 'session.start' | 'session.update' | 'session.end';
+  metadata?: {
+    docsUrl?: string;
+    companyName?: string;
+    [key: string]: unknown;
+  };
 };
 
 const SYSTEM_PROMPT = config.prompt;
@@ -31,6 +37,23 @@ const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY! });
 // In production we recommend fast datastore like Redis or Cloudflare D1 for storing conversation history
 // Here we use a simple in-memory object for demo purposes
 const conversations = {} as Record<string, MessageWithTurnId[]>;
+type ConversationConfig = { docsMcpUrl?: string; companyName?: string };
+const conversationConfigs = {} as Record<string, ConversationConfig>;
+const DEFAULT_DOCS_MCP_URL = 'https://docs.layercode.com/mcp';
+
+const toMcpUrl = (baseUrl: string): string | null => {
+  const trimmed = baseUrl.trim();
+  if (!trimmed) return null;
+  try {
+    const normalized = trimmed.replace(/\/+$/, '');
+    const candidate = `${normalized}/mcp`;
+    new URL(candidate); // Will throw if invalid
+    return candidate;
+  } catch (error) {
+    console.log('Invalid docs URL provided, falling back to default MCP endpoint', { baseUrl, error });
+    return null;
+  }
+};
 
 export const POST = async (request: Request) => {
   const requestBody = (await request.json()) as WebhookRequest;
@@ -52,6 +75,14 @@ export const POST = async (request: Request) => {
   if (!conversations[conversation_id]) {
     conversations[conversation_id] = [];
   }
+  if (!conversationConfigs[conversation_id]) {
+    const runtimeConfig = getRuntimeConfig();
+    const docsMcpUrl = runtimeConfig.docsUrl ? toMcpUrl(runtimeConfig.docsUrl) : null;
+    conversationConfigs[conversation_id] = {
+      docsMcpUrl: docsMcpUrl ?? undefined,
+      companyName: runtimeConfig.companyName
+    };
+  }
 
   // Immediately store the user message received
   conversations[conversation_id].push({ role: 'user', turn_id, content: userText });
@@ -60,10 +91,13 @@ export const POST = async (request: Request) => {
     case 'session.start':
       // A new session/call has started. If you want to send a welcome message (have the agent speak first), return that here.
       return streamResponse(requestBody, async ({ stream }) => {
+        const conversationConfig = conversationConfigs[conversation_id];
+        const companyName = conversationConfig.companyName;
+        const welcomeMessage = companyName ? `Welcome! What can I tell you about ${companyName}?` : WELCOME_MESSAGE;
         // Save the welcome message to the conversation history
-        conversations[conversation_id].push({ role: 'assistant', turn_id, content: WELCOME_MESSAGE });
+        conversations[conversation_id].push({ role: 'assistant', turn_id, content: welcomeMessage });
         // Send the welcome message to be spoken
-        stream.tts(WELCOME_MESSAGE);
+        stream.tts(welcomeMessage);
         stream.end();
       });
     case 'message':
@@ -72,10 +106,12 @@ export const POST = async (request: Request) => {
       // Before generating a response, we store a placeholder assistant msg in the history. This is so that if the agent response is interrupted (which is common for voice agents), before we have the chance to save our agent's response, our conversation history will still follow the correct user-assistant turn order.
       const assistantResposneIdx = conversations[conversation_id].push({ role: 'assistant', turn_id, content: '' });
       return streamResponse(requestBody, async ({ stream }) => {
+        const conversationConfig = conversationConfigs[conversation_id];
         let docsTools = {};
         let docsMCP: Awaited<ReturnType<typeof experimental_createMCPClient>> | null = null;
         try {
-          const docsTransport = new StreamableHTTPClientTransport(new URL('https://docs.layercode.com/mcp'));
+          const docsMcpUrl = conversationConfig.docsMcpUrl ?? DEFAULT_DOCS_MCP_URL;
+          const docsTransport = new StreamableHTTPClientTransport(new URL(docsMcpUrl));
           docsMCP = await experimental_createMCPClient({
             transport: docsTransport
           });
@@ -101,9 +137,13 @@ export const POST = async (request: Request) => {
           }
         });
         try {
+          const companyName = conversationConfig.companyName;
+          const systemPrompt = companyName
+            ? `${SYSTEM_PROMPT}\n\nYou are specifically helping people learn about ${companyName}. Use the available tools, especially the ${companyName} documentation MCP endpoint, to provide accurate answers related to ${companyName}.`
+            : SYSTEM_PROMPT;
           const { textStream } = streamText({
             model: openai('gpt-4o-mini'),
-            system: SYSTEM_PROMPT,
+            system: systemPrompt,
             messages: conversations[conversation_id], // The user message has already been added to the conversation array earlier, so the LLM will be responding to that.
             tools: {
               weather,
@@ -140,6 +180,8 @@ export const POST = async (request: Request) => {
       });
     case 'session.end':
       // The session/call has ended. Here you could store or analyze the conversation transcript (stored in your conversations history)
+      delete conversationConfigs[conversation_id];
+      delete conversations[conversation_id];
       return new Response('OK', { status: 200 });
     case 'session.update':
       // The session/call state has been updated. This happens after the session has ended, and when the recording audio file has been processed and is available for download.

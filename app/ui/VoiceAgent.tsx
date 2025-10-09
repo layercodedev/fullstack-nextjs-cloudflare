@@ -17,6 +17,9 @@ export default function VoiceAgent() {
   const [userSpeaking, setUserSpeaking] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [docsUrlInput, setDocsUrlInput] = useState('');
+  const [companyNameInput, setCompanyNameInput] = useState('');
+  const [isPreparingSession, setIsPreparingSession] = useState(false);
   const playNotify = usePlayNotify('/notify1.wav', { volume: 0.8 });
   const userTranscriptChunksRef = useRef<TranscriptCache>(new Map());
 
@@ -82,11 +85,34 @@ export default function VoiceAgent() {
   }, [disconnect]);
 
   async function handleConnect() {
-    if (status === 'connecting' || status === 'connected') {
+    if (status === 'connecting' || status === 'connected' || isPreparingSession) {
+      return;
+    }
+
+    if (!docsUrlInput.trim() || !companyNameInput.trim()) {
       return;
     }
 
     try {
+      setIsPreparingSession(true);
+      const response = await fetch('/api/runtime-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          docsUrl: docsUrlInput.trim(),
+          companyName: companyNameInput.trim()
+        })
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const errorMessage = errorBody?.error || response.statusText || 'Failed to update runtime config';
+        console.error('Failed to update runtime config', errorMessage);
+        return;
+      }
+
       await connect();
       setMessages([]);
       userTranscriptChunksRef.current.clear();
@@ -95,6 +121,8 @@ export default function VoiceAgent() {
       setIsConnected(true);
     } catch (error) {
       console.error('Failed to connect to voice agent', error);
+    } finally {
+      setIsPreparingSession(false);
     }
   }
 
@@ -107,23 +135,78 @@ export default function VoiceAgent() {
       <div className="max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-x-hidden">
         <HeaderBar agentId={agentId} status={status} turn={turn} isThinking={isThinking} />
 
-        <div className="rounded-md border border-neutral-800 bg-neutral-950/60 h-[70vh] flex flex-col justify-center items-center gap-6 text-center">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-neutral-100">Connect to your Layercode Voice Agent</h1>
-            <p className="text-neutral-400 text-sm max-w-md">Press connect to begin a session with your Layercode voice agent.</p>
+        <div className="rounded-md border border-neutral-800 bg-neutral-950/60 h-[70vh] flex flex-col justify-center items-center gap-6 text-center px-6">
+          <div className="space-y-2 max-w-md">
+            <h1 className="text-2xl font-semibold text-neutral-100">Connect your docs to your Layercode voice agent</h1>
+            <p className="text-neutral-400 text-sm">
+              Provide your company name and docs URL so the agent can answer questions about your knowledge base in real time.
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={handleConnect}
-            disabled={status === 'connecting'}
-            className={`px-6 py-3 cursor-pointer rounded-md text-sm font-medium uppercase tracking-wider transition-colors border ${
-              status === 'connecting'
-                ? 'border-neutral-800 text-neutral-600 bg-neutral-900 cursor-not-allowed'
-                : 'border-violet-600 bg-violet-600/60 text-white hover:bg-violet-500/70 hover:border-violet-500'
-            }`}
+          <form
+            className="w-full max-w-sm space-y-4 text-left"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleConnect();
+            }}
           >
-            {status === 'connecting' ? 'Connecting...' : 'Connect'}
-          </button>
+            <div className="space-y-1">
+              <label htmlFor="company-name" className="block text-xs font-medium uppercase tracking-wider text-neutral-400">
+                Company Name
+              </label>
+              <input
+                id="company-name"
+                type="text"
+                placeholder="Layercode"
+                value={companyNameInput}
+                onChange={(event) => setCompanyNameInput(event.target.value)}
+                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-3 py-2 text-sm text-neutral-100 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                required
+              />
+              <p className="text-[11px] text-neutral-500">We&apos;ll reference this in the welcome message and system prompt.</p>
+            </div>
+            <div className="space-y-1">
+              <label htmlFor="docs-url" className="block text-xs font-medium uppercase tracking-wider text-neutral-400">
+                Docs URL
+              </label>
+              <input
+                id="docs-url"
+                type="url"
+                placeholder="https://your-docs.example.com"
+                value={docsUrlInput}
+                onChange={(event) => setDocsUrlInput(event.target.value)}
+                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-950/70 px-3 py-2 text-sm text-neutral-100 focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                required
+              />
+              <p className="text-[11px] text-neutral-500">
+                Enter the base URL for your docs; we&apos;ll automatically use its <code>/mcp</code> endpoint.
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={
+                status === 'connecting' ||
+                status === 'connected' ||
+                isPreparingSession ||
+                !docsUrlInput.trim() ||
+                !companyNameInput.trim()
+              }
+              className={`w-full px-6 py-3 cursor-pointer rounded-md text-sm font-medium uppercase tracking-wider transition-colors border ${
+                status === 'connecting' ||
+                status === 'connected' ||
+                isPreparingSession ||
+                !docsUrlInput.trim() ||
+                !companyNameInput.trim()
+                  ? 'border-neutral-800 text-neutral-600 bg-neutral-900 cursor-not-allowed'
+                  : 'border-violet-600 bg-violet-600/60 text-white hover:bg-violet-500/70 hover:border-violet-500'
+              }`}
+            >
+              {status === 'connecting'
+                ? 'Connecting...'
+                : isPreparingSession
+                ? 'Preparing...'
+                : 'Connect'}
+            </button>
+          </form>
         </div>
       </div>
     );
