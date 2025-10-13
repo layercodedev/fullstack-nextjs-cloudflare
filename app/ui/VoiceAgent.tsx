@@ -34,7 +34,7 @@ export default function VoiceAgent() {
     onMuteStateChange(isMuted) {
       setMessages((prev) => [...prev, { role: 'data', text: `MIC → ${isMuted ? 'muted' : 'unmuted'}`, ts: Date.now() }]);
     },
-    onConnect: (connectData) => {
+    onConnect: (connectData: { conversationId: string | null; config?: { transcription?: { trigger?: string } } }) => {
       setIsPushToTalk(connectData.config?.transcription.trigger === 'push_to_talk');
     },
     onMessage: (data: any) => {
