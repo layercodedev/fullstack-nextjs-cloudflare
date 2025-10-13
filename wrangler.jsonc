@@ -14,7 +14,14 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "MESSAGES_KV",
+      "id": "38fc52f237e84999af586dfce7ec7514",
+      "preview_id": "5e9a64b4d598473fab5b5b4e62e64769"
+    }
+  ]
   /**
    * Smart Placement
    * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
