@@ -22,5 +22,7 @@ export const POST = async (request: Request) => {
     const text = await response.text();
     return NextResponse.json({ error: text || response.statusText }, { status: response.status });
   }
-  return NextResponse.json(await response.json());
+  const responseData = await response.json();
+  console.log('Authorize response data:', responseData);
+  return NextResponse.json(responseData);
 };

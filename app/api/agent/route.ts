@@ -5,8 +5,8 @@ import { streamText, ModelMessage, tool, stepCountIs } from 'ai';
 import z from 'zod';
 import { streamResponse, verifySignature } from '@layercode/node-server-sdk';
 import { prettyPrintMsgs } from '@/app/utils/msgs';
+import { getConversationStore } from '@/app/utils/conversationStorage';
 import config from '@/layercode.config.json';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 export type MessageWithTurnId = ModelMessage & { turn_id: string };
 type WebhookRequest = {
@@ -26,40 +26,6 @@ const SYSTEM_PROMPT = config.prompt;
 const WELCOME_MESSAGE = config.welcome_message;
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-const inMemoryConversations = {} as Record<string, MessageWithTurnId[]>;
-
-const conversationKey = (conversationId: string) => `conversation:${conversationId}`;
-
-const loadConversation = async (kv: KVNamespace, conversationId: string) => {
-  const existing = await kv.get<MessageWithTurnId[]>(conversationKey(conversationId), { type: 'json' });
-  console.log('existing....');
-  console.log(existing);
-
-  return existing ?? [];
-};
-
-const persistConversation = (kv: KVNamespace, conversationId: string, messages: MessageWithTurnId[]) => kv.put(conversationKey(conversationId), JSON.stringify(messages));
-
-const getConversationStore = () => {
-  try {
-    const { env } = getCloudflareContext();
-    const kv = env.MESSAGES_KV;
-    if (!kv) throw new Error('MESSAGES_KV binding is not configured.');
-    return {
-      load: (conversationId: string) => loadConversation(kv, conversationId),
-      persist: (conversationId: string, messages: MessageWithTurnId[]) => persistConversation(kv, conversationId, messages)
-    };
-  } catch (error) {
-    if (process.env.NODE_ENV === 'production') throw error;
-    console.warn('MESSAGES_KV binding unavailable in this environment – falling back to in-memory storage. Data will reset on restart.', error);
-    return {
-      load: async (conversationId: string) => inMemoryConversations[conversationId] ?? [],
-      persist: async (conversationId: string, messages: MessageWithTurnId[]) => {
-        inMemoryConversations[conversationId] = messages;
-      }
-    };
-  }
-};
 
 export const POST = async (request: Request) => {
   const requestBody = (await request.json()) as WebhookRequest;
