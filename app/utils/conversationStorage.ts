@@ -29,7 +29,9 @@ export const getConversationStore = () => {
     };
   } catch (error) {
     if (process.env.NEXTJS_ENV === 'production') throw error;
-    console.warn('MESSAGES_KV binding unavailable in this environment – falling back to in-memory storage. Data will reset on restart.');
+    console.warn(
+      'MESSAGES_KV binding unavailable in this environment – falling back to in-memory storage. Data will reset on restart. Run `npx wrangler kv namespace create MESSAGES_KV` to create the KV namespace for conversation storage.'
+    );
     return {
       load: async (conversationId: string) => inMemoryConversations[conversationId] ?? [],
       persist: async (conversationId: string, messages: MessageWithTurnId[]) => {
