@@ -14,7 +14,7 @@
   "dependencies": {
     "@ai-sdk/openai": "2.0.27",
     "@layercode/node-server-sdk": "1.2.1",
-    "@layercode/react-sdk": "^2.3.0",
+    "@layercode/react-sdk": "latest",
     "@opennextjs/cloudflare": "1.9.0",
     "ai": "5.0.54",
     "next": "15.5.4",
